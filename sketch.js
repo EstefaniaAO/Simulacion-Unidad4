@@ -2,11 +2,6 @@ function setup() {
   createCanvas(400, 400);
 }
 
-<<<<<<< Updated upstream
-function draw() {
-  background(220);
-}
-=======
 // Muestra en pantalla cualquier error real (ya no deberia salir
 // "Script error." generico gracias al crossorigin en index.html)
 window.addEventListener("error", (e) => {
@@ -500,4 +495,3 @@ class MusicBlock {
     }
   }
 }
->>>>>>> Stashed changes

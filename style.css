@@ -2,12 +2,6 @@
 html, body {
   margin: 0;
   padding: 0;
-<<<<<<< Updated upstream
-}
-canvas {
-  display: block;
-}
-=======
   overflow: hidden;
   background: #0f0c1e;
 }
@@ -15,4 +9,3 @@ canvas {
 canvas {
   display: block;
 }
->>>>>>> Stashed changes
