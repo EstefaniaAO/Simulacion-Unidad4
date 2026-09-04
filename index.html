@@ -1,18 +1,166 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>Kuramoto Breaker — Caja de música</title>
-<link rel="stylesheet" href="style.css">
-
-<!-- crossorigin="anonymous" es clave: sin esto, si algo falla DENTRO
-     de p5.js o p5.sound, el navegador solo muestra "Script error."
-     y oculta el mensaje real por ser un script de otro dominio. -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.js" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/addons/p5.sound.min.js" crossorigin="anonymous"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Caja de Música Etérea — Kuramoto Generativo</title>
+  
+  <!-- Fuentes etéreas y contemplativas -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Outfit:wght@200;300;400;500&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- p5.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.js" crossorigin="anonymous"></script>
 </head>
 <body>
-<script src="sketch.js"></script>
+  <!-- Overlay sutil de inicio de audio -->
+  <div id="audio-prompt" class="glass-banner" onclick="startAudioExperience()">
+    <div class="banner-content">
+      <span class="sparkle">✧</span>
+      <span class="prompt-text">Haz clic o presiona cualquier tecla para despertar el instrumento</span>
+      <span class="sparkle">✧</span>
+    </div>
+  </div>
+
+  <!-- Controles Performativos Flotantes (Minimizables) -->
+  <div id="control-panel" class="floating-panel glassmorphism">
+    <div class="panel-header" onclick="toggleControlPanel()">
+      <div class="panel-title">
+        <span class="icon">✦</span>
+        <span>Controles Performativos</span>
+      </div>
+      <button id="toggle-btn" class="icon-btn" title="Minimizar / Expandir panel">▾</button>
+    </div>
+    
+    <div id="panel-body" class="panel-body">
+      <!-- Selector de Modo de Experiencia -->
+      <div class="mode-bar">
+        <button id="btn-mode-setup" class="mode-btn" onclick="setAppMode('SETUP')" title="Coloca o quita bloques en la constelación">Modo Diseño ✎</button>
+        <button id="btn-mode-play" class="mode-btn active" onclick="setAppMode('PLAY')" title="Activa la pelota y la música viva">Modo Tocar ▶</button>
+      </div>
+
+      <!-- Paleta de Familias (Visible para pintar bloques) -->
+      <div id="palette-group" class="control-group">
+        <div class="label-row">
+          <label>Familia Activa (para colocar)</label>
+          <span class="hint">Teclas 1–4</span>
+        </div>
+        <div class="palette-row">
+          <button class="palette-btn active" id="pal-0" onclick="selectPaintFamily(0)" title="[1] Cristal">
+            <span class="dot" style="background:#dcb8ff;"></span> Cristal
+          </button>
+          <button class="palette-btn" id="pal-1" onclick="selectPaintFamily(1)" title="[2] Pétalo">
+            <span class="dot" style="background:#ffafcc;"></span> Pétalo
+          </button>
+          <button class="palette-btn" id="pal-2" onclick="selectPaintFamily(2)" title="[3] Estrella">
+            <span class="dot" style="background:#ffe082;"></span> Estrella
+          </button>
+          <button class="palette-btn" id="pal-3" onclick="selectPaintFamily(3)" title="[4] Luna">
+            <span class="dot" style="background:#9be7ff;"></span> Luna
+          </button>
+        </div>
+      </div>
+
+      <!-- Dimensiones del Campo / Cuadrícula -->
+      <div class="control-group">
+        <div class="label-row">
+          <label>Tamaño de la Cuadrícula</label>
+          <span id="val-grid" class="val-badge">14 × 6</span>
+        </div>
+        <div class="grid-inputs-row">
+          <div class="sub-input">
+            <span class="sub-label">Cols:</span>
+            <input type="range" id="slider-cols" min="6" max="22" step="1" value="14">
+            <span id="val-cols" class="mini-val">14</span>
+          </div>
+          <div class="sub-input">
+            <span class="sub-label">Filas:</span>
+            <input type="range" id="slider-rows" min="3" max="10" step="1" value="6">
+            <span id="val-rows" class="mini-val">6</span>
+          </div>
+        </div>
+        <div class="grid-presets-row">
+          <button class="preset-pill" id="preset-8-4" onclick="setGridSize(8, 4)">8×4</button>
+          <button class="preset-pill active" id="preset-14-6" onclick="setGridSize(14, 6)">14×6</button>
+          <button class="preset-pill" id="preset-18-8" onclick="setGridSize(18, 8)">18×8</button>
+          <button class="preset-pill" id="preset-22-9" onclick="setGridSize(22, 9)">22×9</button>
+        </div>
+        <div class="hint">Modifica el tamaño de la constelación en tiempo real</div>
+      </div>
+
+      <!-- Velocidad de la pelota -->
+      <div class="control-group">
+        <div class="label-row">
+          <label for="slider-speed">Velocidad de la Pelota</label>
+          <span id="val-speed" class="val-badge">1.0x</span>
+        </div>
+        <input type="range" id="slider-speed" min="0.3" max="2.2" step="0.1" value="1.0">
+        <div class="hint">Regula el ritmo con el que la pelota recorre el instrumento</div>
+      </div>
+
+      <!-- Control de K (Acoplamiento General) -->
+      <div class="control-group">
+        <div class="label-row">
+          <label for="slider-k">Acoplamiento Global (K)</label>
+          <span id="val-k" class="val-badge">0.50</span>
+        </div>
+        <input type="range" id="slider-k" min="0.0" max="2.0" step="0.02" value="0.50">
+        <div class="hint">Sincronización suave y progresiva (~1 minuto) [↑ / ↓]</div>
+      </div>
+
+      <!-- Control de K inter-familias -->
+      <div class="control-group">
+        <div class="label-row">
+          <label for="slider-inter">Acoplamiento Inter-familias</label>
+          <span id="val-inter" class="val-badge">0.30</span>
+        </div>
+        <input type="range" id="slider-inter" min="0.0" max="1.5" step="0.02" value="0.30">
+        <div class="hint">Nivel 2: conecta las cuatro familias sonoras entre sí</div>
+      </div>
+
+      <!-- Dispersión de frecuencias -->
+      <div class="control-group">
+        <div class="label-row">
+          <label for="slider-spread">Dispersión de Frecuencias (Δω)</label>
+          <span id="val-spread" class="val-badge">0.006</span>
+        </div>
+        <input type="range" id="slider-spread" min="0.001" max="0.020" step="0.001" value="0.006">
+        <div class="hint">Diversidad natural entre osciladores [← / →]</div>
+      </div>
+
+      <!-- Acciones performativas -->
+      <div class="button-row">
+        <button class="action-btn" onclick="triggerManualWave()" title="Genera una onda expansiva de luz que desincroniza orgánicamente el sistema">
+          <span>Onda de Luz ༄</span>
+        </button>
+        <button class="action-btn" onclick="randomizePhases()" title="Devuelve al sistema al desorden inicial bien distribuido">
+          <span>Sembrar Caos ↺</span>
+        </button>
+      </div>
+
+      <div class="button-row" style="margin-top: -6px; grid-template-columns: 1fr 1fr 1fr;">
+        <button class="action-btn secondary" onclick="fillAllGridBlocks()" title="Llena toda la cuadrícula con las 4 familias">
+          <span>Llenar ▤</span>
+        </button>
+        <button class="action-btn secondary" onclick="loadDefaultConstellation()" title="Restaura la constelación armónica central">
+          <span>Constelación ✦</span>
+        </button>
+        <button class="action-btn secondary" onclick="clearAllBlocks()" title="Limpia todos los bloques">
+          <span>Vaciar ✕</span>
+        </button>
+      </div>
+
+      <div class="keyboard-legend">
+        <div><kbd>↑</kbd><kbd>↓</kbd> K Global · <kbd>←</kbd><kbd>→</kbd> Dispersión</div>
+        <div><kbd>Espacio</kbd> Relanzar Pelota · <kbd>Clic</kbd> Tocar Bloque u Onda</div>
+        <div><kbd>Shift+Clic</kbd> / <kbd>Clic Der.</kbd> Cambiar Familia</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="sketch.js"></script>
 </body>
 </html>
